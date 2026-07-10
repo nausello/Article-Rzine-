@@ -561,6 +561,31 @@ readRDS("data/df_final.rds") |>
 
 ```{r  echo=F, warning=F, message=F, results=F, eval=F}
 
+
+# Téléchargement des bases de données 
+
+dir.create("data", showWarnings = FALSE)
+
+fichiers <- list(
+  bpe            = "https://zenodo.org/records/21261696/files/bpe.csv",
+  epci_com_idf   = "https://zenodo.org/records/21261696/files/codes_epci-com.csv",
+  dvf21          = "https://zenodo.org/records/21261696/files/dvf2021.csv",
+  dvf22          = "https://zenodo.org/records/21261696/files/dvf2022.csv",
+  dvf23          = "https://zenodo.org/records/21261696/files/dvf2023.csv",
+  dvf24          = "https://zenodo.org/records/21261696/files/dvf2024.csv",
+  rev_21         = "https://zenodo.org/records/21261696/files/revenu_2021.csv",
+  ept_idf        = "https://zenodo.org/records/21261696/files/ept_IDF.csv",
+  fisc           = "https://zenodo.org/records/21261696/files/fiscalite_locale_21-24.csv"
+)
+
+options(timeout = 3600) 
+for (nom in names(fichiers)) {
+  dest <- paste0("data/", basename(fichiers[[nom]]))
+  if (!file.exists(dest)) {
+    download.file(fichiers[[nom]], destfile = dest, mode = "wb")
+  }
+}
+
 # Chargement des données 
 
   # Données de prix 
