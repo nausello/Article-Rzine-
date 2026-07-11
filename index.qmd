@@ -8,7 +8,7 @@ L'analyse spatiale des phénomènes sociaux repose sur la capacité à constitue
 
 Le premier principe de géographie, formulé par @Tobler1970, postule que les unités spatiales proches se ressemblent davantage que les unités éloignées. Ce principe de dépendance spatiale fonde la légitimité des approches de **régionalisation contrainte** qui visent à construire des partitions territoriales respectant simultanément une contrainte de contiguïté spatiale et un critère d'homogénéité des caractéristiques retenues [@Duque2007]. Les méthodes développées dans cette perspective, parmi lesquelles la classification hiérarchique géographiquement contrainte [@Chavent2018], l'algorithme SKATER [@Assuncao2006] ou les approches REDCAP [@Guo2008], partagent une logique de reconstruction globale de la partition : elles ignorent les découpages institutionnels existants et optimisent une fonction de cohésion sur l'ensemble du territoire.
 
-Cette logique de reconstruction *ex nihilo* présente une limite dans les contextes d'analyse des politiques territoriales, où la question posée n'est pas de créer un regroupement d'observations individuelles géolocalisées à partir de leurs caractéristiques, mais d'évaluer la pertinence d'un découpage administratif existant [@Coombes1986; @Farmer2011; @Klapka2013]. La distinction entre régions **fonctionnelles**, définies par les interactions effectives entre unités et régions **administratives** héritées de processus institutionnels, est en effet au cœur de nombreux travaux en géographie quantitative [@Openshaw1984; @Farmer2011].Les établissements publics de coopération intercommunale (EPCI), les arrondissements ou les zones d'emploi constituent des cadres institutionnels dont la cohérence statistique mérite d'être interrogée : dans quelle mesure reflètent-ils des réalités socio-spatiales homogènes, ou au contraire agrègent-ils des unités dont les profils seraient plus proches de groupements voisins [@Openshaw1984; @Briant2010] ? Les **effets de frontière** administratifs ont été documentés dans de nombreux domaines : fiscalité [@Revelli2003], marchés immobiliers [@Guerois2009; @Fack2010], concurrence fiscale et offre de services publics locaux [@Tiebout1956], suggérant que l'appartenance à un groupement institutionnel produit des effets propres, distincts des caractéristiques intrinsèques des unités qui le composent.
+Cette logique de reconstruction présente une limite dans les contextes d'analyse des politiques territoriales, où la question posée n'est pas de créer un regroupement d'observations individuelles géolocalisées à partir de leurs caractéristiques, mais d'évaluer la pertinence d'un découpage administratif existant [@Coombes1986; @Farmer2011; @Klapka2013]. La distinction entre régions **fonctionnelles**, définies par les interactions effectives entre unités et régions **administratives** héritées de processus institutionnels, est en effet au cœur de nombreux travaux en géographie quantitative [@Openshaw1984; @Farmer2011].Les établissements publics de coopération intercommunale (EPCI), les arrondissements ou les zones d'emploi constituent des cadres institutionnels dont la cohérence statistique mérite d'être interrogée : dans quelle mesure reflètent-ils des réalités socio-spatiales homogènes, ou au contraire agrègent-ils des unités dont les profils seraient plus proches de groupements voisins [@Openshaw1984; @Briant2010] ? Les **effets de frontière** administratifs ont été documentés dans de nombreux domaines : fiscalité [@Revelli2003], marchés immobiliers [@Guerois2009; @Fack2010], concurrence fiscale et offre de services publics locaux [@Tiebout1956], suggérant que l'appartenance à un groupement institutionnel produit des effets propres, distincts des caractéristiques intrinsèques des unités qui le composent.
 
 Cette question de la cohérence des observations au sein des découpages est d'autant plus complexe que leurs relations statistiques ne sont pas spatialement stationnaires : l'effet d'un déterminant sur une variable d'intérêt varie selon le contexte local [@Brunsdon1996]. La régression géographiquement pondérée (*Geographically Weighted Regression*, GWR) [@Fotheringham2002] et son extension multiscalaire (MGWR) [@Fotheringham2017; @Yu2020] permettent précisément d'estimer des coefficients locaux, commune par commune, capturant cette hétérogénéité spatiale des relations. Ces coefficients constituent une représentation du comportement territorial des unités vis-à-vis d'un phénomène donné, au-delà de leurs simples caractéristiques brutes. Nous soulignons donc l'intérêt de prendre en l'hétérogénéité spatiale des relations statistiques dans l'utilisation du package `spatialRegroup`, présenté dans cet article.
 
@@ -428,9 +428,36 @@ Dans cette même logique mais de manière différente, `spatialRegroup` offre la
 
 Nous proposons une application de `spatialRegroup` à la taxe foncière sur les propriétés bâties (TFPB) en région Île-de-France pour l'année 2024. Ce cas d'application est particulièrement adapté car le taux de TFPB effectivement supporté par les propriétaires résulte d'une superposition de décisions communales et intercommunales. L'appartenance d'une commune à un EPCI plutôt qu'un autre produit donc des effets fiscaux directs. Identifier les communes dont le profil est statistiquement incohérent avec leur EPCI d'appartenance revient à localiser des zones de friction aux frontières intercommunales. Avant d'appliquer le package, nous esquissons brièvement la structure institutionnelle qui détermine ces effets.
 
-## Les régimes fiscaux sur la propriété en Île-de-France
+## Les régimes fiscaux sur la propriété en Île-de-France 
 
 Sur 1283 communes franciliennes (hors Paris), 1192 sont sous le régime de la fiscalité professionnelle unique (FPU) et 71 sous le régime de la fiscalité additionnelle (FA) (figure 3). Ces deux régimes se distinguent principalement par le traitement de la fiscalité économique, mais convergent sur un point important pour notre propos : dans les deux cas, le taux global de TFPB effectivement acquitté par les propriétaires résulte d'une superposition du taux communal et d'un taux additionnel voté par l'EPCI : l'appartenance d'une commune à un groupement intercommunal plutôt qu'un autre détermine directement le niveau de pression fiscale sur son territoire.
+
+```{r}
+
+fichiers_shp <- list(
+  communes = "https://zenodo.org/records/21307967/files/communes.zip"
+)
+
+options(timeout = 3600)  
+
+dir.create("data", showWarnings = FALSE)
+dir.create("data/shp", showWarnings = FALSE)
+
+for (nom in names(fichiers_shp)) {
+  dest <- paste0("data/shp/", basename(fichiers_shp[[nom]]))
+  if (!file.exists(dest)) {
+    download.file(fichiers_shp[[nom]], destfile = dest, mode = "wb")
+  }
+  
+  dossier_extrait <- file.path("data/shp", nom)
+  if (!dir.exists(dossier_extrait)) {
+    unzip(dest, exdir = dossier_extrait)
+  }
+}
+
+
+```
+
 
 ```{r}
 #| echo: false
@@ -532,7 +559,7 @@ knitr::include_graphics("figures/carte_regime_fiscal.png")
 
 ## Les données retenues
 
-Dans le cadre de l'application du package `spatialRegroup` au cas de la fiscalité sur la propriété immobilière, nous mobilisons quatre jeux de données pour les communes d'Île-de-France, à l'exclusion de Paris. Cette exclusion se justifie par le statut administratif singulier de Paris par rapport aux autres Etablissement publics territoriaux (EPT) et EPCI. Le périmètre retenu couvre ainsi les sept départements de grande et petite couronne (77, 78, 91, 92, 93, 94, 95), pour un échantillon de 1250 communes disposant de données complètes sur l'ensemble des variables.
+Dans le cadre de l'application du package `spatialRegroup` au cas de la fiscalité sur la propriété immobilière, nous mobilisons quatre jeux de données pour les communes d'Île-de-France, à l'exclusion de Paris. Cette exclusion se justifie par le statut administratif singulier de Paris par rapport aux autres Etablissement publics territoriaux (EPT) et EPCI, et dont la taille constituerait un effet levier démesuré sur les paramètres de l'algorithme. Le périmètre retenu couvre ainsi les sept départements de grande et petite couronne (77, 78, 91, 92, 93, 94, 95), pour un échantillon de 1250 communes disposant de données complètes sur l'ensemble des variables.
 
 - **Les données Demandes de Valeurs Foncières (DVF)**, issues de la base *open data* de la Direction Générale des Finances Publiques, renseignent l'ensemble des transactions immobilières enregistrées entre 2021 et 2024. Après filtrage sur la nature des mutations (ventes uniquement) et le type de bien (maisons et appartements), les valeurs aberrantes sont exclues selon des seuils raisonnés : prix compris entre 15 000 € et 5 000 000 €, surface entre 10 et 350 m² (200 m² pour les appartements), et prix au m² entre 330 € et 10 000 €. Ces seuils visent à éliminer les transactions multiventes et les enregistrements erronés sans tronquer la distribution des marchés les plus tendus de l'agglomération [@Mericskay2022]. Le recours à quatre années consécutives, plutôt qu'à une seule, permet de stabiliser les estimations communales du prix moyen au m² (prix_m2_moy), particulièrement nécessaire pour les communes à faible volume de transactions.
 
@@ -561,7 +588,6 @@ readRDS("data/df_final.rds") |>
 
 ```{r  echo=F, warning=F, message=F, results=F, eval=F}
 
-
 # Téléchargement des bases de données 
 
 dir.create("data", showWarnings = FALSE)
@@ -577,14 +603,20 @@ fichiers <- list(
   ept_idf        = "https://zenodo.org/records/21261696/files/ept_IDF.csv",
   fisc           = "https://zenodo.org/records/21261696/files/fiscalite_locale_21-24.csv"
 )
-
+    
 options(timeout = 3600) 
 for (nom in names(fichiers)) {
   dest <- paste0("data/", basename(fichiers[[nom]]))
   if (!file.exists(dest)) {
     download.file(fichiers[[nom]], destfile = dest, mode = "wb")
   }
-}
+} 
+
+
+```
+  
+
+```{r  echo=F, warning=F, message=F, results=F, eval=F}
 
 # Chargement des données 
 
