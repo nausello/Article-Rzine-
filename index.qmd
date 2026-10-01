@@ -468,7 +468,7 @@ tmap_mode("plot")
 regime_fisc <- readr::read_csv2("data/regime_fiscal.csv", locale = readr::locale(encoding = "UTF-8"))
 
 # Données spatiales des communes
-com <- read_sf("data/communes.shp")
+com <- read_sf("data/communes/communes.shp")
 
 regime_fisc2 <- com |>
   dplyr::left_join(
@@ -508,7 +508,7 @@ carte_regime <-  tm_shape(regime_fisc_idf) +
     size   = 2.0,
     labels = "Limites des EPCI"
   ) +
-  tm_scale_bar(
+  tm_scalebar(
     breaks    = c(0, 20),
     text.size = 0.8,
     position  = c("right", "bottom")
@@ -961,7 +961,7 @@ carte_mgwr <- tm_shape(sp_long) +
     title    = "Coefficient β"
   ) +
   tm_facets(by = "variable", ncol = 3) +
-  tm_scale_bar(
+  tm_scalebar(
     breaks   = c(0, 20, 40),          
     text.size = 0.8,
     position = c("left", "bottom")
